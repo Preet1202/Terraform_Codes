@@ -1,0 +1,91 @@
+resource "azurerm_key_vault" "example" {
+  name                = "example-keyvault"
+  resource_group_name = azurerm_resource_group.example.name
+  location            = azurerm_resource_group.example.location
+  sku_name            = "standard"
+
+  tenant_id     = data.azurerm_client_config.current.tenant_id
+  soft_delete_enabled = true
+
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    secret_permissions = ["get"]
+  }
+}
+
+resource "azurerm_app_service_plan" "example" {
+  name                = "example-appserviceplan"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  sku {
+    tier = "Standard"
+    size = "S1"
+  }
+}
+
+resource "azurerm_app_service" "example" {
+  name                = "example-appservice"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  app_service_plan_id = azurerm_app_service_plan.example.id
+
+  site_config {
+    dotnet_framework_version = "v5.0"
+  }
+}
+
+resource "azurerm_function_app" "example" {
+  name                = "example-functionapp"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  app_service_plan_id = azurerm_app_service_plan.example.id
+}
+
+data "azurerm_client_config" "current" {}
+
+resource "azurerm_key_vault_access_policy" "example" {
+  key_vault_id = azurerm_key_vault.example.id
+
+  tenant_id = data.azurerm_client_config.current.tenant_id
+  object_id = data.azurerm_client_config.current.object_id
+
+  secret_permissions = ["get"]
+}
+
+resource "azurerm_function_app_slot" "example" {
+  name                = "example-functionapp-slot"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+  app_service_plan_id = azurerm_app_service_plan.example.id
+  function_app_id     = azurerm_function_app.example.id
+}
+
+module "app_settings" {
+  source = "Azure/keyvault-app-settings/azurerm"
+  version = "0.2.0"
+
+  app_service_id     = azurerm_app_service.example.id
+  function_app_id    = azurerm_function_app.example.id
+  function_app_slot_id = azurerm_function_app_slot.example.id
+
+  key_vault_id        = azurerm_key_vault.example.id
+  key_vault_resource_group_name = azurerm_resource_group.example.name
+}
+
+output "key_vault_uri" {
+  value = azurerm_key_vault.example.vault_uri
+}
+
+output "app_service_url" {
+  value = "https://${azurerm_app_service.example.name}.azurewebsites.net"
+}
+
+output "function_app_url" {
+  value = "https://${azurerm_function_app.example.name}.azurewebsites.net"
+}
+
+output "function_app_slot_url" {
+  value = "https://${azurerm_function_app_slot.example.name}.azurewebsites.net"
+}
