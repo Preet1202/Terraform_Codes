@@ -1,6 +1,6 @@
 resource "azurerm_linux_web_app" "front_end_web_app" {
   name                = var.front_end_app_name
-  resource_group_name = var.resource_group_name
+  resource_group_name = azurerm_resource_group.resource_group.name
   location            = local.azure_region
   tags                = local.tags
   service_plan_id     = azurerm_service_plan.frontend_service_plan.id
